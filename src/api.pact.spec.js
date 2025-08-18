@@ -254,7 +254,7 @@ describe('API Pact test', () => {
         .willRespondWith({
           status: 404,
           headers: {
-            'Content-Type': 'application/json; charset=utf-8'
+            'Content-Type': 'application/text; charset=utf-8'
           },
           body: {
             error: like('User not found'),

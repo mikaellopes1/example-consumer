@@ -42,6 +42,24 @@ export class API {
       })
       .then((r) => new Product(r.data));
   }
+
+  async changeUserPassword(userData, changePasswordRequest) {
+    const requestEntity = {
+      emailAddress: userData.username,
+      userResourceGuid: userData.userResourceGuid,
+      oldPassword: changePasswordRequest.oldPassword,
+      newPassword: changePasswordRequest.newPassword
+    };
+
+    return axios
+      .post(this.withPath('/user/change-password'), requestEntity, {
+        headers: {
+          Authorization: this.generateAuthToken(),
+          'Content-Type': 'application/json'
+        }
+      })
+      .then((r) => r.data);
+  }
 }
 
 export default new API(

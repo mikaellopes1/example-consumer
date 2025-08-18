@@ -119,4 +119,156 @@ describe('API Pact test', () => {
       });
     });
   });
+
+  describe('changing user password', () => {
+    test('successful password change', async () => {
+      // Arrange
+      const userData = {
+        username: 'test@example.com',
+        userResourceGuid: '123e4567-e89b-12d3-a456-426614174000'
+      };
+
+      const changePasswordRequest = {
+        oldPassword: 'oldPassword123',
+        newPassword: 'newPassword456'
+      };
+
+      mockProvider
+        .given('a user exists with valid credentials')
+        .uponReceiving('a request to change user password')
+        .withRequest({
+          method: 'POST',
+          path: '/user/change-password',
+          headers: {
+            Authorization: like('Bearer 2019-01-14T11:34:18.045Z'),
+            'Content-Type': 'application/json'
+          },
+          body: {
+            emailAddress: like('test@example.com'),
+            userResourceGuid: like('123e4567-e89b-12d3-a456-426614174000'),
+            oldPassword: like('oldPassword123'),
+            newPassword: like('newPassword456')
+          }
+        })
+        .willRespondWith({
+          status: 200,
+          headers: {
+            'Content-Type': 'application/json; charset=utf-8'
+          },
+          body: {
+            success: like(true),
+            message: like('Password changed successfully')
+          }
+        });
+
+      return mockProvider.executeTest(async (mockserver) => {
+        // Act
+        const api = new API(mockserver.url);
+        const result = await api.changeUserPassword(userData, changePasswordRequest);
+
+        // Assert
+        expect(result.success).toBe(true);
+        expect(result.message).toBe('Password changed successfully');
+        return;
+      });
+    });
+
+    test('password change with invalid old password', async () => {
+      // Arrange
+      const userData = {
+        username: 'test@example.com',
+        userResourceGuid: '123e4567-e89b-12d3-a456-426614174000'
+      };
+
+      const changePasswordRequest = {
+        oldPassword: 'wrongPassword',
+        newPassword: 'newPassword456'
+      };
+
+      mockProvider
+        .given('a user exists but old password is incorrect')
+        .uponReceiving('a request to change user password with wrong old password')
+        .withRequest({
+          method: 'POST',
+          path: '/user/change-password',
+          headers: {
+            Authorization: like('Bearer 2019-01-14T11:34:18.045Z'),
+            'Content-Type': 'application/json'
+          },
+          body: {
+            emailAddress: like('test@example.com'),
+            userResourceGuid: like('123e4567-e89b-12d3-a456-426614174000'),
+            oldPassword: like('wrongPassword'),
+            newPassword: like('newPassword456')
+          }
+        })
+        .willRespondWith({
+          status: 400,
+          headers: {
+            'Content-Type': 'application/json; charset=utf-8'
+          },
+          body: {
+            error: like('Invalid old password'),
+            code: like('INVALID_OLD_PASSWORD')
+          }
+        });
+
+      return mockProvider.executeTest(async (mockserver) => {
+        // Act & Assert
+        const api = new API(mockserver.url);
+        await expect(api.changeUserPassword(userData, changePasswordRequest))
+          .rejects.toThrow('Request failed with status code 400');
+        return;
+      });
+    });
+
+    test('password change for non-existent user', async () => {
+      // Arrange
+      const userData = {
+        username: 'nonexistent@example.com',
+        userResourceGuid: '999e4567-e89b-12d3-a456-426614174999'
+      };
+
+      const changePasswordRequest = {
+        oldPassword: 'anyPassword',
+        newPassword: 'newPassword456'
+      };
+
+      mockProvider
+        .given('a user does not exist')
+        .uponReceiving('a request to change password for non-existent user')
+        .withRequest({
+          method: 'POST',
+          path: '/user/change-password',
+          headers: {
+            Authorization: like('Bearer 2019-01-14T11:34:18.045Z'),
+            'Content-Type': 'application/json'
+          },
+          body: {
+            emailAddress: like('nonexistent@example.com'),
+            userResourceGuid: like('999e4567-e89b-12d3-a456-426614174999'),
+            oldPassword: like('anyPassword'),
+            newPassword: like('newPassword456')
+          }
+        })
+        .willRespondWith({
+          status: 404,
+          headers: {
+            'Content-Type': 'application/json; charset=utf-8'
+          },
+          body: {
+            error: like('User not found'),
+            code: like('USER_NOT_FOUND')
+          }
+        });
+
+      return mockProvider.executeTest(async (mockserver) => {
+        // Act & Assert
+        const api = new API(mockserver.url);
+        await expect(api.changeUserPassword(userData, changePasswordRequest))
+          .rejects.toThrow('Request failed with status code 404');
+        return;
+      });
+    });
+  });
 });
